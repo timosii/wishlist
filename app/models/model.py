@@ -1,44 +1,35 @@
 from sqlalchemy import Column, ForeignKey, Numeric, String
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import Optional, List
 
 from app.models.database import Base
 
 
-class Items(Base):
+class User(Base):
+    __tablename__ = 'users'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(String(30))
+    surname: Mapped[str] = mapped_column(String(30))
+    items: Mapped[List["Item"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"User(id={self.id!r}, username={self.username!r}, name={self.name!r}, surname={self.surname!r})"
+
+
+class Item(Base):
     __tablename__ = 'items'
 
-    id = Column(Numeric, primary_key=True)
-    title = Column(String, unique=True)
-    description = Column(String)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(30))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    price: Mapped[Optional[int]]
+    description: Mapped[Optional[str]]
 
-    submenus = relationship('Submenu',
-                            back_populates='menu',
-                            cascade='all, delete')
+    user: Mapped["User"] = relationship(back_populates="items")
 
-
-class Submenu(Base):
-    __tablename__ = 'submenus'
-
-    id = Column(UUID(as_uuid=True), primary_key=True)
-    title = Column(String, unique=True)
-    description = Column(String)
-    parent_menu_id = Column(UUID(as_uuid=True), ForeignKey('menus.id'))
-
-    menu = relationship('Menu', back_populates='submenus')
-    dishes = relationship('Dish',
-                          back_populates='submenu',
-                          cascade='all, delete')
-
-
-class Dish(Base):
-    __tablename__ = 'dishes'
-
-    id = Column(UUID(as_uuid=True), primary_key=True)
-    title = Column(String, unique=True)
-    description = Column(String)
-    price = Column(Numeric(scale=2))
-    parent_submenu_id = Column(UUID(as_uuid=True), ForeignKey('submenus.id'))
-
-    submenu = relationship('Submenu',
-                           back_populates='dishes')
+    def __repr__(self) -> str:
+        return f"Item(id={self.id!r}, title={self.title!r}, description={self.fullname!r})"
