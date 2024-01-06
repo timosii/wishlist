@@ -12,12 +12,14 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def process_start_command(message: Message):
-    await message.answer(text="Выбери команду:")
+    await message.answer(text="Помогу определиться с подарком для близкого человека. Выбери команду:")
+
+# команды: /new - новый
 
 
 @dp.message(Command(commands="help"))
 async def process_help_command(message: Message):
-    await message.answer(text="Пока ничего не умею")
+    await message.answer(text="/new - добавить товар в вишлист /watch_my - посмотреть мой вишлист /watch_other - посмотреть чужие вишлисты")
 
 
 # @dp.message(Command(commands=["today", "tomorrow"]))
