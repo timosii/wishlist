@@ -1,7 +1,6 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-
-from config import settings
+from sqlalchemy.orm import declarative_base, Session
+from sqlalchemy import create_engine
+from app.config import settings
 
 
 def get_url() -> str:
@@ -11,19 +10,14 @@ def get_url() -> str:
     port = settings.POSTGRES_PORT
     db = settings.POSTGRES_DB
 
-    return f'postgresql+asyncpg://{user}:{password}@{hostname}:{port}/{db}'
+    return f'postgresql://{user}:{password}@{hostname}:{port}/{db}'
 
 
 SQLALCHEMY_DATABASE_URL = get_url()
-
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
-
-async_session = sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False)
+# SQLALCHEMY_DATABASE_URL = "postgresql://postgres:new_pass@localhost:5432/test"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL
+)
 
 Base = declarative_base()
-
-
-async def get_db() -> AsyncSession:
-    async with async_session() as session:
-        yield session
+session = Session(engine)

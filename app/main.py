@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
-from config import settings
+from app.config import settings
 
 BOT_TOKEN = settings.BOT_TOKEN
 
@@ -14,13 +14,17 @@ dp = Dispatcher()
 async def process_start_command(message: Message):
     await message.answer(text="Помогу определиться с подарком для близкого человека. Выбери команду:")
 
-# команды: /new - новый
+# команды: /watch - посмотреть свой вишлист /add добавить предмет в свой вишлист
 
 
 @dp.message(Command(commands="help"))
 async def process_help_command(message: Message):
     await message.answer(text="/new - добавить товар в вишлист /watch_my - посмотреть мой вишлист /watch_other - посмотреть чужие вишлисты")
 
+
+@dp.message(Command(commands="add"))
+async def process_add_command(message: Message):
+    await message.answer(text="Что хотите добавить?")
 
 # @dp.message(Command(commands=["today", "tomorrow"]))
 # async def process_time_command(message: Message):
