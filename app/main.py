@@ -1,9 +1,11 @@
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from utils import parse_message
 from app.config import settings
-from app.controllers import db_con
+from app.db_controller import delete_wish, delete_user, watch_wishlist, add_user, add_wish
+from app.view import HELP_TEXT,START_TEXT, DEL_INFO, view_item_lst
+
 
 BOT_TOKEN = settings.BOT_TOKEN
 
@@ -13,71 +15,65 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def start_command(message: Message):
-    await message.answer(text="Помогу определиться с подарком для близкого человека. Выбери команду:")
+    await message.answer(text=START_TEXT)
 
 
 @dp.message(Command(commands="help"))
 async def help_command(message: Message):
-    await message.answer(text="/add - добавить товар в вишлист\
-                                /watch_my - посмотреть мой вишлист \
-                                /watch_username - посмотреть чужой вишлист")
+    await message.answer(text=HELP_TEXT, parse_mode='HTML')
 
 
 @dp.message(F.text.startswith('/add'))
 async def process_add_command(message: Message):
+    user_id = str(message.from_user.id)
     username = message.from_user.username
     name = message.from_user.first_name
     _, title, url = parse_message(message.text)
-    db_con.add_user(username=username, 
-                    name=name)
-    db_con.add_wish(username=username,
-                    title=title,
-                    url=url
-                    )
-    await message.answer(text="Подарок добавлен <3")
+    add_user(user_id=user_id,
+                        username=username,
+                        name=name,
+                        )
+    res = add_wish(user_id=user_id,
+                        title=title,
+                        url=url
+                        )
+    await message.answer(text=res)
 
 
 @dp.message(F.text.startswith('/del'))
 async def process_del_command(message: Message):
-    username = message.from_user.username
+    user_id = str(message.from_user.id)
     name = message.from_user.first_name
     _, title, url = parse_message(message.text)
-    db_con.delete_wish(username=username, 
-                    title=title)
-    await message.answer(text="Подарок удален <3")
-
-
-@dp.message(Command(commands="add"))
-async def add_define_command(message: Message):
-    await message.answer(text="Введите /add и название подарка, который хотите добавить.\
-                         Например: /add Кофеварка\
-                         После названия через пробел вы можете добавить ссылку на товар, если хотите")
-    
-
-@dp.message(Command(commands="del"))
-async def add_define_command(message: Message):
-    await message.answer(text="Введите /del и название подарка, который хотите удалить.\
-                         Например: /del Кофеварка\
-                         Если вы хотите удалить свой вишлист полностью, введите: /delete_all")
+    if not title: # значит введена только команда
+        res = DEL_INFO
+    else:
+        res = delete_wish(user_id=user_id,
+                      title=title)
+    await message.answer(text=res, parse_mode='HTML')
 
 
 @dp.message(Command(commands='remove_all'))
 async def process_del_user(message: Message):
-    username = message.from_user.username
-    db_con.delete_user(username=username)
-    await message.answer(text="Вишлист удален <3")
-
-
-@dp.message(Command(commands="watch_my"))
-async def process_watch_command(message: Message):
-    username = message.from_user.username
-    res = db_con.watch_wishlist(username=username)
+    user_id = str(message.from_user.id)
+    res = delete_user(user_id=user_id)
     await message.answer(text=res)
+
+
+@dp.message(Command(commands="my_wishlist"))
+async def process_watch_command(message: Message):
+    user_id = str(message.from_user.id)
+    res = view_item_lst(watch_wishlist(user_id=user_id))
+    link_preview_options = types.LinkPreviewOptions(
+        is_disabled=True,
+        disable_web_page_preview=True,
+    )
+    await message.answer(text=res, link_preview_options=link_preview_options, parse_mode='HTML')
 
 
 @dp.message()
 async def process_day_command(message: Message):
-     await message.answer(text="Введите команду")
+     await message.answer(text="Для помощи введите /help")
 
 
 if __name__ == '__main__':

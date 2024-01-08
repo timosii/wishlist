@@ -1,22 +1,22 @@
-from sqlalchemy import Column, ForeignKey, Numeric, String, Table
+from sqlalchemy import Column, ForeignKey, Numeric, String, Table, Integer
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from typing import Optional, List
 
-from app.models.database import Base, session, engine
+from app.database import Base, session, engine
 
 
 class User(Base):
     __tablename__ = 'users'
 
-    # id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(String(30), primary_key=True)
+    user_id: Mapped[str] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(30))
     name: Mapped[Optional[str]]
     items: Mapped[List["Item"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
-        return f"User(username={self.username!r}, name={self.name!r}, surname={self.surname!r})"
+        return f"User(user_id={self.user_id!r}, username={self.username!r}, name={self.name!r}, surname={self.surname!r})"
 
 
 class Item(Base):
@@ -24,7 +24,7 @@ class Item(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(50))
-    username: Mapped[int] = mapped_column(ForeignKey("users.username"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
     url: Mapped[Optional[str]]
 
     user: Mapped["User"] = relationship(back_populates="items")
@@ -34,6 +34,3 @@ class Item(Base):
 
 
 Base.metadata.create_all(engine)
-
-
-

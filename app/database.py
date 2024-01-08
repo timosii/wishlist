@@ -14,7 +14,6 @@ def get_url() -> str:
 
 
 SQLALCHEMY_DATABASE_URL = get_url()
-# SQLALCHEMY_DATABASE_URL = "postgresql://postgres:new_pass@localhost:5432/test"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL
 )
