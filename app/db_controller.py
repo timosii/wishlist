@@ -116,7 +116,6 @@ def empty_del(user_id: str):
     return 
 
 
-
 def delete_user(user_id: str):
     with Session(engine) as session:
         if not check_user(user_id=user_id):
