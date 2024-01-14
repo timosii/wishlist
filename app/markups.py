@@ -41,10 +41,25 @@ button_all = KeyboardButton(text='Посмотреть свой вишлист')
 button_friends = KeyboardButton(text='Посмотреть вишлисты друзей')
 
 base_keyboard = ReplyKeyboardMarkup(keyboard=[[button_add,
-                                               button_del,
-                                               button_all,
+                                               button_del],
+                                               [button_all,
                                                button_friends
                                                ]],
                                                resize_keyboard=True
                                                )
+
+button_cancel = KeyboardButton(text='Отменить')
+cancel_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[
+        button_cancel
+    ]], resize_keyboard=True
+)
+
+btn_url = KeyboardButton(text='Без ссылки')
+without_url = ReplyKeyboardMarkup(
+    keyboard=[[
+        btn_url,
+        button_cancel
+    ]], resize_keyboard=True
+)
 

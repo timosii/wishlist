@@ -70,7 +70,7 @@ def delete_wish(user_id: str,
                 ) -> None:
     
     if not title:
-        return     
+        return 'Подарок не найден'
 
     if title.isdigit():
         title = find_item_by_number(user_id=user_id, number=title)
@@ -83,7 +83,7 @@ def delete_wish(user_id: str,
             wish_for_delete = session.scalars(stmt).one()
             session.delete(wish_for_delete) # удаляется итем
             session.commit()
-            return 'Подарок удалён'
+            return 'Подарок удалён!'
 
 
 def watch_wishlist(user_id: str) -> List[Item]:
