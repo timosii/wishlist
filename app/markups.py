@@ -39,6 +39,7 @@ button_del = KeyboardButton(text='Удалить желание')
 button_add = KeyboardButton(text='Добавить желание')
 button_all = KeyboardButton(text='Посмотреть свой вишлист')
 button_friends = KeyboardButton(text='Посмотреть вишлисты друзей')
+button_del_all = KeyboardButton(text='Удалить вишлист полностью')
 
 base_keyboard = ReplyKeyboardMarkup(keyboard=[[button_add,
                                                button_del],
@@ -48,6 +49,9 @@ base_keyboard = ReplyKeyboardMarkup(keyboard=[[button_add,
                                                resize_keyboard=True
                                                )
 
+del_all_keyboard = ReplyKeyboardMarkup(keyboard=[[button_del_all]],
+                                                  resize_keyboard=True)
+
 button_cancel = KeyboardButton(text='Отменить')
 cancel_keyboard = ReplyKeyboardMarkup(
     keyboard=[[
@@ -56,10 +60,19 @@ cancel_keyboard = ReplyKeyboardMarkup(
 )
 
 btn_url = KeyboardButton(text='Без ссылки')
+btn_description = KeyboardButton(text='Без описания')
 without_url = ReplyKeyboardMarkup(
     keyboard=[[
         btn_url,
         button_cancel
     ]], resize_keyboard=True
 )
+
+without_description = ReplyKeyboardMarkup(
+    keyboard=[[
+        btn_description,
+        button_cancel
+    ]], resize_keyboard=True
+)
+
 

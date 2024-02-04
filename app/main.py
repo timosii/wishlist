@@ -4,11 +4,11 @@ from aiogram.fsm.state import default_state, State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.redis import RedisStorage, Redis
 from aiogram.types import Message, ReplyKeyboardRemove, BotCommand, CallbackQuery
-from utils import parse_message, validate_url
+from utils import validate_url
 from app.config import settings
 from app.db_controller import delete_wish, delete_user, watch_wishlist, add_user, add_wish, check_user
-from app.view import HELP_TEXT,START_TEXT, DEL_INFO, DELETE_MESS, view_item_lst
-from app.markups import base_keyboard, cancel_keyboard, without_url
+from app.view import HELP_TEXT,START_TEXT, DEL_INFO, DELETE_MESS, view_item_lst, NO_ITEMS
+from app.markups import base_keyboard, cancel_keyboard, without_url, del_all_keyboard, without_description
 
 BOT_TOKEN = settings.BOT_TOKEN
 
@@ -25,6 +25,7 @@ dp = Dispatcher(storage=storage)
 class FSMAddItem(StatesGroup):
     title_add = State()
     url_add = State()
+    description_add = State()
 
 
 class FSMDelItem(StatesGroup):
@@ -47,8 +48,9 @@ async def set_main_menu(bot: Bot):
     await bot.set_my_commands(main_menu_commands)
 
 
-@dp.message(CommandStart(), StateFilter(default_state))
-async def start_command(message: Message):
+@dp.message(CommandStart())
+async def start_command(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(text=START_TEXT,
                          reply_markup=base_keyboard)
 
@@ -79,38 +81,23 @@ async def process_title_add(message: Message, state: FSMContext):
     await state.set_state(FSMAddItem.url_add)
 
 
-@dp.message(F.text.lower() == 'без ссылки', StateFilter(FSMAddItem.url_add))
-async def process_cancel_command(message: Message, state: FSMContext):
-    data = await state.get_data()
-    print(data)
-    title = data['title']
-    user_id = str(message.from_user.id)
-    username = message.from_user.username
-    name = message.from_user.first_name
-
-    add_user(user_id=user_id, 
-             username=username, 
-             name=name
-             )
-    
-    add_wish(user_id=user_id,
-             title=title,
-             )
-    await state.clear()
-    await message.answer(
-        text='Подарок без ссылки добавлен!',
-        reply_markup=base_keyboard
-    )
-
-
 @dp.message(StateFilter(FSMAddItem.url_add), F.text.lower() != 'отменить')
-async def process_url_add(message: Message, state: FSMContext):
+async def process_title_add(message: Message, state: FSMContext):
     await state.update_data(url=message.text)
-    await message.answer(text='Спасибо! Ссылка добавлена!')
+    await message.answer(text='Добавьте описание, если хотите!',
+                         reply_markup=without_description
+                         )
+    await state.set_state(FSMAddItem.description_add)
+
+
+@dp.message(StateFilter(FSMAddItem.description_add), F.text.lower() != 'отменить')
+async def process_title_add(message: Message, state: FSMContext):
+    await state.update_data(description=message.text)
     data = await state.get_data()
     print(data)
     title = data['title']
     url = data['url']
+    description = data['description']
     user_id = str(message.from_user.id)
     username = message.from_user.username
     name = message.from_user.first_name
@@ -122,13 +109,13 @@ async def process_url_add(message: Message, state: FSMContext):
     
     add_wish(user_id=user_id,
              title=title,
-             url=url
+             url=url,
+             description=description
              )
-
-    # Завершаем машину состояний
     await state.clear()
-    await message.answer(text='Подарок добавлен со ссылкой!',
-                         reply_markup=base_keyboard)
+    await message.answer(text='Подарок добавлен!',
+                         reply_markup=base_keyboard,
+                         )
 
 
 @dp.message(F.text.lower() == 'удалить желание', StateFilter(default_state))
@@ -139,24 +126,35 @@ async def start_del_process(message: Message, state: FSMContext):
         is_disabled=True,
         disable_web_page_preview=True,
     )
-    await message.answer(text=res, link_preview_options=link_preview_options, parse_mode='HTML')
-    await state.set_state(FSMDelItem.choose_number)
-    await message.answer(text='Введите номер или название подарка, который хотите удалить',
-                         reply_markup=cancel_keyboard,
-                         )
+
+    if not res:
+        await state.clear()
+        await message.answer(text= NO_ITEMS,
+                             parse_mode='HTML',
+                             reply_markup=base_keyboard)
+    else:
+        await message.answer(text=res,
+                        link_preview_options=link_preview_options,
+                        parse_mode='HTML')
+        await state.set_state(FSMDelItem.choose_number)
+        await message.answer(text='Введите номер или название подарка, который хотите удалить',
+                             reply_markup=cancel_keyboard
+                             )
 
 
 @dp.message(StateFilter(FSMDelItem.choose_number), F.text.lower() != 'отменить')
 async def process_wish_del(message: Message, state: FSMContext):
     await state.update_data(title=message.text)
     data = await state.get_data()
-    print(data)
+    # print(data)
     title = data['title']
     user_id = str(message.from_user.id)
     res = delete_wish(user_id=user_id,
                       title=title)
     
-    await message.answer(text=res, parse_mode='HTML')
+    await message.answer(text=res,
+                         parse_mode='HTML',
+                         reply_markup=cancel_keyboard)
 
     # Завершаем машину состояний
     await state.clear()
@@ -168,11 +166,19 @@ async def process_wish_del(message: Message, state: FSMContext):
 async def process_my_wishlist(message: Message):
     user_id = str(message.from_user.id)
     res = view_item_lst(watch_wishlist(user_id=user_id))
-    link_preview_options = types.LinkPreviewOptions(
-        is_disabled=True,
-        disable_web_page_preview=True,
-    )
-    await message.answer(text=res, link_preview_options=link_preview_options, parse_mode='HTML')
+    if res:
+        link_preview_options = types.LinkPreviewOptions(
+            is_disabled=True,
+            disable_web_page_preview=True,
+        )
+        await message.answer(text=res,
+                             link_preview_options=link_preview_options,
+                             parse_mode='HTML')
+    else:
+        await message.answer(text=NO_ITEMS,
+                             parse_mode='HTML',
+                             reply_markup=base_keyboard)
+
 
 
 @dp.message(F.text.lower() == 'посмотреть вишлисты друзей')
@@ -196,10 +202,11 @@ async def process_del_user(message: Message):
         await message.answer(text='У вас нет вишлиста. Создайте скорее!')
     else:
         await message.answer(text=DELETE_MESS,
-                             parse_mode='HTML')
+                             parse_mode='HTML',
+                             reply_markup=del_all_keyboard)
 
 
-@dp.message(F.text.lower() == 'удалить вишлист')
+@dp.message(F.text.lower() == 'удалить вишлист полностью')
 async def process_del_user(message: Message):
     user_id = str(message.from_user.id)
     res = delete_user(user_id=user_id)

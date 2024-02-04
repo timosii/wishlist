@@ -26,6 +26,7 @@ class Item(Base):
     title: Mapped[str] = mapped_column(String(50))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
     url: Mapped[Optional[str]]
+    description: Mapped[Optional[str]]
 
     user: Mapped["User"] = relationship(back_populates="items")
 

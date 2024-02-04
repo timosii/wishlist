@@ -45,7 +45,8 @@ def add_user(user_id: str,
 
 def add_wish(user_id: str, 
              title: str, 
-             url: str = None
+             url: str,
+             description: str
              ):
     with Session(engine) as session:
         if not title:
@@ -59,7 +60,8 @@ def add_wish(user_id: str,
             item = Item(
                 user_id=user_id, 
                 title=title, 
-                url=url)
+                url=url,
+                description=description)
             session.add(item)
             session.commit()
             return 'Подарок добавлен!'
@@ -89,15 +91,17 @@ def delete_wish(user_id: str,
 def watch_wishlist(user_id: str) -> List[Item]:
     with Session(engine) as session:
         if not check_user(user_id=user_id):
-            return 'У вас нет вишлиста! Добавьте что-нибудь'
+            return
         else:
             stmt = select(User).where(User.user_id == user_id)
             res = session.scalars(stmt)
             result = [item for user in res for item in user.items]
-            if not result:
-                return 'В виш-листе ничего нет! Добавьте что-нибудь'
-            else:
-                return result
+            return result
+            # if not result:
+            #     # return 'В виш-листе ничего нет! Добавьте что-нибудь'
+            #     return None
+            # else:
+            #     return result
 
 
 def find_item_by_number(user_id: str, number: str):
