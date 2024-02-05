@@ -6,9 +6,9 @@ from aiogram.fsm.storage.redis import RedisStorage, Redis
 from aiogram.types import Message, ReplyKeyboardRemove, BotCommand, CallbackQuery
 from utils import validate_url
 from app.config import settings
-from app.db_controller import delete_wish, delete_user, watch_wishlist, add_user, add_wish, check_user
+from app.db_controller import delete_wish, delete_user, watch_wishlist, add_user, add_wish, check_user, check_item, update_wish
 from app.view import HELP_TEXT,START_TEXT, DEL_INFO, DELETE_MESS, view_item_lst, NO_ITEMS
-from app.markups import base_keyboard, cancel_keyboard, without_url, del_all_keyboard, without_description
+from app.markups import base_keyboard, cancel_keyboard, without_url, del_all_keyboard, without_description, update_keyboard, cancel_update_keyboard
 
 BOT_TOKEN = settings.BOT_TOKEN
 
@@ -34,6 +34,12 @@ class FSMDelItem(StatesGroup):
 
 class FSMFriendsWish(StatesGroup):
     choose_friend = State()
+
+
+class FSMUpdateWish(StatesGroup):
+    choose_wish = State()
+    choose_change = State()
+    update = State()
 
 
 async def set_main_menu(bot: Bot):
@@ -98,6 +104,12 @@ async def process_title_add(message: Message, state: FSMContext):
     title = data['title']
     url = data['url']
     description = data['description']
+
+    if url.lower() == 'без ссылки':
+        url = None
+    if description.lower() == 'без описания':
+        description = None
+
     user_id = str(message.from_user.id)
     username = message.from_user.username
     name = message.from_user.first_name
@@ -134,8 +146,8 @@ async def start_del_process(message: Message, state: FSMContext):
                              reply_markup=base_keyboard)
     else:
         await message.answer(text=res,
-                        link_preview_options=link_preview_options,
-                        parse_mode='HTML')
+                             link_preview_options=link_preview_options,
+                             parse_mode='HTML')
         await state.set_state(FSMDelItem.choose_number)
         await message.answer(text='Введите номер или название подарка, который хотите удалить',
                              reply_markup=cancel_keyboard
@@ -146,21 +158,14 @@ async def start_del_process(message: Message, state: FSMContext):
 async def process_wish_del(message: Message, state: FSMContext):
     await state.update_data(title=message.text)
     data = await state.get_data()
-    # print(data)
     title = data['title']
     user_id = str(message.from_user.id)
     res = delete_wish(user_id=user_id,
                       title=title)
-    
+    await state.clear()
     await message.answer(text=res,
                          parse_mode='HTML',
-                         reply_markup=cancel_keyboard)
-
-    # Завершаем машину состояний
-    await state.clear()
-    await message.answer(text='Возвращаемся в меню',
-                         reply_markup=base_keyboard)
-    
+                         reply_markup=base_keyboard)    
 
 @dp.message(F.text.lower() == 'посмотреть свой вишлист')
 async def process_my_wishlist(message: Message):
@@ -178,7 +183,6 @@ async def process_my_wishlist(message: Message):
         await message.answer(text=NO_ITEMS,
                              parse_mode='HTML',
                              reply_markup=base_keyboard)
-
 
 
 @dp.message(F.text.lower() == 'посмотреть вишлисты друзей')
@@ -213,6 +217,82 @@ async def process_del_user(message: Message):
     await message.answer(text=res,
                          reply_markup=ReplyKeyboardRemove(),
                          parse_mode='HTML')
+
+
+@dp.message(F.text.lower() == 'изменить подарок', StateFilter(default_state))
+async def process_update_wish(message: Message, state: FSMContext):
+    user_id = str(message.from_user.id)
+    res = view_item_lst(watch_wishlist(user_id=user_id))
+
+    if not res:
+        await state.clear()
+        await message.answer(text= NO_ITEMS,
+                             parse_mode='HTML',
+                             reply_markup=base_keyboard)
+    else:
+        link_preview_options = types.LinkPreviewOptions(
+                is_disabled=True,
+                disable_web_page_preview=True,
+            )
+        await message.answer(text=res,
+                             link_preview_options=link_preview_options,
+                             parse_mode='HTML')
+        await state.set_state(FSMUpdateWish.choose_wish)
+        await message.answer(text='Введите номер или название подарка, который хотите изменить',
+                             reply_markup=cancel_keyboard
+                             )
+
+
+@dp.message(StateFilter(FSMUpdateWish.choose_wish), F.text.lower() != 'отменить')
+async def process_wish_update(message: Message, state: FSMContext):
+    await state.update_data(title=message.text)
+    user_id = str(message.from_user.id)
+    data = await state.get_data()
+    title = data['title']
+    res = check_item(user_id=user_id,
+                     title=title)
+    if not res:    
+        await state.clear()
+        await message.answer(text='Подарок не найден',
+                             reply_markup=base_keyboard)
+    else:
+        await state.set_state(FSMUpdateWish.choose_change)
+        await message.answer(text='Выбери, что хотел бы изменить',
+                            reply_markup=update_keyboard)
+
+
+@dp.message(StateFilter(FSMUpdateWish.choose_change), F.text.lower() != 'отменить')
+async def process_wish_update_cont(message: Message, state: FSMContext):
+    rename_dict = {'URL': 'url',
+                   'Название': 'title',
+                   'Описание': 'description'
+                   }
+    await state.update_data(what_update=rename_dict[message.text])
+    await state.set_state(FSMUpdateWish.update)
+    await message.answer(text='Введите новые данные',
+                         reply_markup=cancel_update_keyboard)
+
+
+@dp.message(StateFilter(FSMUpdateWish.update), F.text.lower() != 'отменить')
+async def process_update(message: Message, state: FSMContext):
+    await state.update_data(new_data=message.text)
+    user_id = str(message.from_user.id)
+    data = await state.get_data()
+    title = data['title']
+    what_update = data['what_update']
+    new_data = data['new_data']
+    if new_data.lower() == 'удалить поле':
+        new_data = None        
+
+    res = update_wish(user_id=user_id,
+                    title=title,
+                    what_update=what_update,
+                    new_data=new_data)
+
+    await state.clear()
+    await message.answer(text=res,
+                        reply_markup=base_keyboard)
+
 
 
 @dp.message()

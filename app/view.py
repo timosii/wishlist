@@ -13,8 +13,8 @@ def view_item_lst(items: List[Item] | None) -> str:
         return 
     res = []
     for i, item in enumerate(items):
-        url_view = f"<a href='{item.url}'>{item.title}</a>" if item.url != 'Без ссылки' else item.title
-        description = f". {item.description}" if item.description != 'Без описания' else ''
+        url_view = f"<a href='{item.url}'>{item.title}</a>" if item.url else item.title
+        description = f". {item.description}" if item.description else ''
         res.append(f"<b>{i + 1}. {url_view}</b>{description}")
 
     return '\n'.join(res)

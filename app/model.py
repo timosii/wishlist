@@ -31,7 +31,7 @@ class Item(Base):
     user: Mapped["User"] = relationship(back_populates="items")
 
     def __repr__(self) -> str:
-        return f"Item(id={self.id!r}, title={self.title!r}, url={self.url!r})"
+        return f"Item(id={self.id!r}, title={self.title!r}, url={self.url!r}, description={self.description!r})"
 
 
 Base.metadata.create_all(engine)

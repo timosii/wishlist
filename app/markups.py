@@ -40,10 +40,15 @@ button_add = KeyboardButton(text='Добавить желание')
 button_all = KeyboardButton(text='Посмотреть свой вишлист')
 button_friends = KeyboardButton(text='Посмотреть вишлисты друзей')
 button_del_all = KeyboardButton(text='Удалить вишлист полностью')
+button_update = KeyboardButton(text='Изменить подарок')
+btn_url_upd = KeyboardButton(text='URL')
+btn_title_upd = KeyboardButton(text='Название')
+btn_description_upd = KeyboardButton(text='Описание')
 
 base_keyboard = ReplyKeyboardMarkup(keyboard=[[button_add,
                                                button_del],
                                                [button_all,
+                                               button_update,
                                                button_friends
                                                ]],
                                                resize_keyboard=True
@@ -73,6 +78,24 @@ without_description = ReplyKeyboardMarkup(
         btn_description,
         button_cancel
     ]], resize_keyboard=True
+)
+
+btn_set_empty = KeyboardButton(text='Удалить поле')
+
+cancel_update_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[
+        btn_set_empty,
+        button_cancel
+    ]], resize_keyboard=True
+)
+
+update_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[
+        btn_title_upd,
+        btn_url_upd],
+        [btn_description_upd,
+        button_cancel]
+    ], resize_keyboard=True
 )
 
 

@@ -2,7 +2,7 @@ import asyncio
 from typing import List
 from app.model import Item, User
 from app.database import engine
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import NoResultFound
 
@@ -19,6 +19,10 @@ def check_user(user_id: str):
 
 def check_item(user_id: str, 
                title: str):
+    
+    if title.isdigit():
+        title = find_item_by_number(user_id=user_id, number=title)
+    
     with Session(engine) as session:
         stmt = select(Item).where(Item.title == title).where(Item.user_id == user_id)
         try:
@@ -57,14 +61,45 @@ def add_wish(user_id: str,
             return 'Подарок уже есть, придумайте что-нибудь ещё!'
         
         else:
-            item = Item(
-                user_id=user_id, 
-                title=title, 
-                url=url,
-                description=description)
+            item = Item(user_id=user_id,
+                        title=title,
+                        url=url,
+                        description=description)
             session.add(item)
             session.commit()
             return 'Подарок добавлен!'
+        
+def update_wish(user_id: str,
+                title: str,
+                what_update: str,
+                new_data: str):
+    
+    if title.isdigit():
+        title = find_item_by_number(user_id=user_id, number=title)
+
+    with Session(engine) as session:
+        if not check_item(user_id=user_id, title=title):
+            return 'Подарок не найден'
+        
+        else:
+            define_dict = {
+                'title': Item.title,
+                'url': Item.url,
+                'description': Item.description
+            }
+
+            update_expr = {define_dict[what_update]: new_data}
+
+            stmt = (
+                update(Item).
+                where(Item.user_id == user_id).
+                where(Item.title == title).
+                values(update_expr)
+            )
+
+            session.execute(stmt)
+            session.commit()
+            return 'Подарок обновлен!'
 
 
 def delete_wish(user_id: str,
@@ -80,6 +115,7 @@ def delete_wish(user_id: str,
     with Session(engine) as session:
         if not check_item(user_id=user_id, title=title):
             return 'Подарок не найден'
+        
         else:
             stmt = select(Item).where(Item.user_id == user_id).where(Item.title == title)
             wish_for_delete = session.scalars(stmt).one()
